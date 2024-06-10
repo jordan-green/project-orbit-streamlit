@@ -7,6 +7,16 @@ import json
 import streamlit as st
 
 def load_data(shape_file_option):
+    """
+    Load pharmacy data and filter metro areas based on the selected shapefile option.
+
+    Parameters:
+    - shape_file_option (str): The selected option for metro area boundaries.
+
+    Returns:
+    - gdf (GeoDataFrame): Geospatial DataFrame of pharmacies with metro area classification.
+    - filtered_metro_areas_json (dict): GeoJSON of filtered metro areas.
+    """
     os.environ["SHAPE_RESTORE_SHX"] = "YES"
 
     df = pd.read_csv("Mapping Data/All pharmacies aus cleaned.csv")
@@ -15,88 +25,110 @@ def load_data(shape_file_option):
     df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
     df = df.dropna(subset=["latitude", "longitude"])
 
-    if shape_file_option == "OECD Functional Urban Areas Core Commuting":
-        old_metro_areas = gpd.read_file(
-            "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
+    try:
+        if shape_file_option == "OECD Functional Urban Areas Core Commuting":
+            old_metro_areas = gpd.read_file(
+                "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
+            )
+            print("Columns in old_metro_areas:", old_metro_areas.columns)
+            print("CRS of old_metro_areas before transformation:", old_metro_areas.crs)
+
+            capital_cities = [
+                "Sydney",
+                "Melbourne",
+                "Brisbane",
+                "Perth",
+                "Adelaide",
+                "Hobart",
+                "Canberra",
+                "Darwin",
+            ]
+            filtered_old_metro_areas = old_metro_areas[
+                old_metro_areas["SUA_NAME21"].isin(capital_cities)
+            ]
+            new_metro_areas = gpd.read_file(
+                "Mapping Data/OECD Functional Urban Area/AUS_core_commuting.shp"
+            )
+
+            if new_metro_areas.crs is None:
+                new_metro_areas.set_crs("EPSG:7844", inplace=True)
+
+            if old_metro_areas.crs != "EPSG:4326":
+                old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
+            if new_metro_areas.crs != "EPSG:4326":
+                new_metro_areas = new_metro_areas.to_crs("EPSG:4326")
+
+            filtered_new_metro_areas = gpd.sjoin(
+                new_metro_areas,
+                filtered_old_metro_areas,
+                how="inner",
+                predicate="intersects",
+            )
+            filtered_metro_areas_json = json.loads(filtered_new_metro_areas.to_json())
+            filtered_metro_areas = filtered_new_metro_areas
+        else:
+            old_metro_areas = gpd.read_file(
+                "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
+            )
+            print("Columns in old_metro_areas:", old_metro_areas.columns)
+            print("CRS of old_metro_areas before transformation:", old_metro_areas.crs)
+
+            capital_cities = [
+                "Sydney",
+                "Melbourne",
+                "Brisbane",
+                "Perth",
+                "Adelaide",
+                "Hobart",
+                "Canberra",
+                "Darwin",
+            ]
+            filtered_metro_areas = old_metro_areas[
+                old_metro_areas["SUA_NAME21"].isin(capital_cities)
+            ]
+
+            if old_metro_areas.crs != "EPSG:4326":
+                old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
+
+            filtered_metro_areas_json = json.loads(filtered_metro_areas.to_json())
+
+        print("CRS of old_metro_areas after transformation:", old_metro_areas.crs)
+        gdf = gpd.GeoDataFrame(
+            df, geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326"
         )
-        print("Columns in old_metro_areas:", old_metro_areas.columns)
-        capital_cities = [
-            "Sydney",
-            "Melbourne",
-            "Brisbane",
-            "Perth",
-            "Adelaide",
-            "Hobart",
-            "Canberra",
-            "Darwin",
-        ]
-        filtered_old_metro_areas = old_metro_areas[
-            old_metro_areas["SUA_NAME21"].isin(capital_cities)
-        ]
-        new_metro_areas = gpd.read_file(
-            "Mapping Data/OECD Functional Urban Area/AUS_core_commuting.shp"
+
+        gdf["metro_area"] = gdf.geometry.apply(
+            lambda x: next(
+                (
+                    name
+                    for name, geom in zip(
+                        filtered_metro_areas["SUA_NAME21"], filtered_metro_areas.geometry
+                    )
+                    if geom.contains(x)
+                ),
+                "Outside Metro",
+            )
         )
 
-        if new_metro_areas.crs is None:
-            new_metro_areas.set_crs("EPSG:7844", inplace=True)
+        return gdf, filtered_metro_areas_json
 
-        if old_metro_areas.crs != "EPSG:4326":
-            old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
-        if new_metro_areas.crs != "EPSG:4326":
-            new_metro_areas = new_metro_areas.to_crs("EPSG:4326")
-
-        filtered_new_metro_areas = gpd.sjoin(
-            new_metro_areas,
-            filtered_old_metro_areas,
-            how="inner",
-            predicate="intersects",
-        )
-        filtered_metro_areas_json = json.loads(filtered_new_metro_areas.to_json())
-        filtered_metro_areas = filtered_new_metro_areas
-    else:
-        old_metro_areas = gpd.read_file(
-            "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
-        )
-        print("Columns in old_metro_areas:", old_metro_areas.columns)
-        capital_cities = [
-            "Sydney",
-            "Melbourne",
-            "Brisbane",
-            "Perth",
-            "Adelaide",
-            "Hobart",
-            "Canberra",
-            "Darwin",
-        ]
-        filtered_metro_areas = old_metro_areas[
-            old_metro_areas["SUA_NAME21"].isin(capital_cities)
-        ]
-
-        if old_metro_areas.crs != "EPSG:4326":
-            old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
-
-        filtered_metro_areas_json = json.loads(filtered_metro_areas.to_json())
-
-    gdf = gpd.GeoDataFrame(
-        df, geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326"
-    )
-
-    gdf["metro_area"] = gdf.geometry.apply(
-        lambda x: next(
-            (
-                name
-                for name, geom in zip(
-                    filtered_metro_areas["SUA_NAME21"], filtered_metro_areas.geometry
-                )
-                if geom.contains(x)
-            ),
-            "Outside Metro",
-        )
-    )
-
-    return gdf, filtered_metro_areas_json
+    except Exception as e:
+        print("An error occurred:", e)
+        raise
 
 def create_views(gdf, corporate_col, filtered_metro_areas_json):
+    """
+    Create visualizations and market share data for pharmacies by corporate group.
+
+    Parameters:
+    - gdf (GeoDataFrame): Geospatial DataFrame of pharmacies.
+    - corporate_col (str): The column name for corporate group classification.
+    - filtered_metro_areas_json (dict): GeoJSON of filtered metro areas.
+
+    Returns:
+    - fig (Figure): Plotly map figure.
+    - market_share (DataFrame): DataFrame of market share by metro area and corporate group.
+    """
     gdf_filtered = gdf.copy()
 
     store_count = (
@@ -168,6 +200,9 @@ def create_views(gdf, corporate_col, filtered_metro_areas_json):
     return fig, market_share
 
 def main():
+    """
+    Main function to run the Streamlit app.
+    """
     st.set_page_config(page_title="Pharmacy Market Share", layout="wide")
 
     st.markdown(
