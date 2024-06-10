@@ -4,11 +4,7 @@ __pycache__/
 *$py.class
 
 #shape files too big for github
-*.shp
-*.shx
 *.zip
-*.cpg
-*.dbf
 *.prj
 
 
