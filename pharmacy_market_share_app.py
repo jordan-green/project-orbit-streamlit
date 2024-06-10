@@ -33,19 +33,12 @@ def load_data(shape_file_option):
             print("Columns in old_metro_areas:", old_metro_areas.columns)
             print("CRS of old_metro_areas before transformation:", old_metro_areas.crs)
 
-            capital_cities = [
-                "Sydney",
-                "Melbourne",
-                "Brisbane",
-                "Perth",
-                "Adelaide",
-                "Hobart",
-                "Canberra",
-                "Darwin",
-            ]
-            filtered_old_metro_areas = old_metro_areas[
-                old_metro_areas["SUA_NAME21"].isin(capital_cities)
-            ]
+            if old_metro_areas.crs is None:
+                old_metro_areas.set_crs("EPSG:7844", inplace=True)
+
+            if old_metro_areas.crs != "EPSG:4326":
+                old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
+
             new_metro_areas = gpd.read_file(
                 "Mapping Data/OECD Functional Urban Area/AUS_core_commuting.shp"
             )
@@ -53,16 +46,19 @@ def load_data(shape_file_option):
             if new_metro_areas.crs is None:
                 new_metro_areas.set_crs("EPSG:7844", inplace=True)
 
-            if old_metro_areas.crs != "EPSG:4326":
-                old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
             if new_metro_areas.crs != "EPSG:4326":
                 new_metro_areas = new_metro_areas.to_crs("EPSG:4326")
 
+            filtered_old_metro_areas = old_metro_areas[
+                old_metro_areas["SUA_NAME21"].isin([
+                    "Sydney", "Melbourne", "Brisbane", "Perth",
+                    "Adelaide", "Hobart", "Canberra", "Darwin"
+                ])
+            ]
+
             filtered_new_metro_areas = gpd.sjoin(
-                new_metro_areas,
-                filtered_old_metro_areas,
-                how="inner",
-                predicate="intersects",
+                new_metro_areas, filtered_old_metro_areas,
+                how="inner", predicate="intersects"
             )
             filtered_metro_areas_json = json.loads(filtered_new_metro_areas.to_json())
             filtered_metro_areas = filtered_new_metro_areas
@@ -73,26 +69,20 @@ def load_data(shape_file_option):
             print("Columns in old_metro_areas:", old_metro_areas.columns)
             print("CRS of old_metro_areas before transformation:", old_metro_areas.crs)
 
-            capital_cities = [
-                "Sydney",
-                "Melbourne",
-                "Brisbane",
-                "Perth",
-                "Adelaide",
-                "Hobart",
-                "Canberra",
-                "Darwin",
-            ]
-            filtered_metro_areas = old_metro_areas[
-                old_metro_areas["SUA_NAME21"].isin(capital_cities)
-            ]
+            if old_metro_areas.crs is None:
+                old_metro_areas.set_crs("EPSG:7844", inplace=True)
 
             if old_metro_areas.crs != "EPSG:4326":
                 old_metro_areas = old_metro_areas.to_crs("EPSG:4326")
 
+            filtered_metro_areas = old_metro_areas[
+                old_metro_areas["SUA_NAME21"].isin([
+                    "Sydney", "Melbourne", "Brisbane", "Perth",
+                    "Adelaide", "Hobart", "Canberra", "Darwin"
+                ])
+            ]
             filtered_metro_areas_json = json.loads(filtered_metro_areas.to_json())
 
-        print("CRS of old_metro_areas after transformation:", old_metro_areas.crs)
         gdf = gpd.GeoDataFrame(
             df, geometry=gpd.points_from_xy(df.longitude, df.latitude), crs="EPSG:4326"
         )
