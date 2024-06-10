@@ -7,16 +7,6 @@ import json
 import streamlit as st
 
 def load_data(shape_file_option):
-    """
-    Load pharmacy data and filter metro areas based on the selected shapefile option.
-
-    Parameters:
-    - shape_file_option (str): The selected option for metro area boundaries.
-
-    Returns:
-    - gdf (GeoDataFrame): Geospatial DataFrame of pharmacies with metro area classification.
-    - filtered_metro_areas_json (dict): GeoJSON of filtered metro areas.
-    """
     os.environ["SHAPE_RESTORE_SHX"] = "YES"
 
     df = pd.read_csv("Mapping Data/All pharmacies aus cleaned.csv")
@@ -29,6 +19,7 @@ def load_data(shape_file_option):
         old_metro_areas = gpd.read_file(
             "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
         )
+        print("Columns in old_metro_areas:", old_metro_areas.columns)
         capital_cities = [
             "Sydney",
             "Melbourne",
@@ -66,6 +57,7 @@ def load_data(shape_file_option):
         old_metro_areas = gpd.read_file(
             "Mapping Data/SUA_2021_AUST_GDA2020_SHP/SUA_2021_AUST_GDA2020.shp"
         )
+        print("Columns in old_metro_areas:", old_metro_areas.columns)
         capital_cities = [
             "Sydney",
             "Melbourne",
@@ -105,18 +97,6 @@ def load_data(shape_file_option):
     return gdf, filtered_metro_areas_json
 
 def create_views(gdf, corporate_col, filtered_metro_areas_json):
-    """
-    Create visualizations and market share data for pharmacies by corporate group.
-
-    Parameters:
-    - gdf (GeoDataFrame): Geospatial DataFrame of pharmacies.
-    - corporate_col (str): The column name for corporate group classification.
-    - filtered_metro_areas_json (dict): GeoJSON of filtered metro areas.
-
-    Returns:
-    - fig (Figure): Plotly map figure.
-    - market_share (DataFrame): DataFrame of market share by metro area and corporate group.
-    """
     gdf_filtered = gdf.copy()
 
     store_count = (
@@ -188,9 +168,6 @@ def create_views(gdf, corporate_col, filtered_metro_areas_json):
     return fig, market_share
 
 def main():
-    """
-    Main function to run the Streamlit app.
-    """
     st.set_page_config(page_title="Pharmacy Market Share", layout="wide")
 
     st.markdown(
@@ -269,7 +246,7 @@ def main():
             st.plotly_chart(pre_merge_fig)
 
             st.markdown(
-                "<div class='map-title'>Post-Merger Stores in Australia by Corporate</div>",
+                "<div class='map-title'>Post-Merger Stores in Australia by Corporate 2</div>",
                 unsafe_allow_html=True,
             )
             post_merge_fig, post_market_share_majors = create_views(
@@ -290,7 +267,7 @@ def main():
             st.plotly_chart(pre_merge_fig)
 
             st.markdown(
-                "<div class='map-title'>Post-Merger Stores in Australia by Corporate</div>",
+                "<div class='map-title'>Post-Merger Stores in Australia by Corporate 2</div>",
                 unsafe_allow_html=True,
             )
             post_merge_fig, post_market_share_all = create_views(
